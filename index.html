@@ -7,169 +7,88 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f7fa;color:#333;min-height:100vh}
-header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:32px 20px;text-align:center}
-header h1{font-size:26px;margin-bottom:4px}
+header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:40px 20px;text-align:center}
+header h1{font-size:26px;margin-bottom:6px}
 header p{font-size:14px;opacity:.85}
-.container{max-width:800px;margin:0 auto;padding:20px}
-.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.filter-btn{padding:7px 18px;border:2px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:.2s}
+.container{max-width:640px;margin:0 auto;padding:20px}
+.btn-big{display:block;width:100%;padding:18px;background:#22c55e;color:#fff;border:none;border-radius:12px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;transition:.2s;margin-bottom:24px;box-shadow:0 4px 12px rgba(34,197,94,.3)}
+.btn-big:hover{background:#16a34a}
+.divider{text-align:center;color:#aaa;font-size:13px;margin-bottom:20px;position:relative}
+.divider:before,.divider:after{content:'';position:absolute;top:50%;width:40%;height:1px;background:#e0e0e0}
+.divider:before{left:0}.divider:after{right:0}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 16px;border:2px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:.2s}
 .filter-btn.active{background:#667eea;color:#fff;border-color:#667eea}
-.filter-btn.active-prod{background:#22c55e;color:#fff;border-color:#22c55e}
-.filter-btn.active-sit{background:#f59e0b;color:#fff;border-color:#f59e0b}
 .card{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.card .info{flex:1;min-width:150px}
-.card .version{font-size:17px;font-weight:700}
+.card .info{flex:1;min-width:140px}
+.card .version{font-size:16px;font-weight:700}
 .card .meta{font-size:13px;color:#888;margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
 .badge{padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600;display:inline-block}
-.badge-prod{background:#dcfce7;color:#16a34a}
-.badge-sit{background:#fef3c7;color:#d97706}
+.badge-release{background:#dcfce7;color:#16a34a}
+.badge-test{background:#fef3c7;color:#d97706}
 .badge-android{background:#e0e7ff;color:#4f46e5}
 .badge-ios{background:#f3e8ff;color:#9333ea}
-.btns{display:flex;gap:6px;flex-wrap:wrap}
-.btns a{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:.2s;text-align:center}
-.btn-local{background:#22c55e;color:#fff}
-.btn-local:hover{background:#16a34a}
-.btn-backup{background:#e0e0e0;color:#666;font-size:12px}
-.btn-backup:hover{background:#ccc}
-.card .size{font-size:13px;color:#aaa;white-space:nowrap}
-.loading,.empty{text-align:center;padding:60px 20px;color:#999;font-size:15px}
-.empty{display:none}
+.card .download{background:#667eea;color:#fff;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:.2s;display:inline-block}
+.card .download:hover{background:#5a6fd6}
+.size{font-size:12px;color:#aaa}
+.loading,.empty{text-align:center;padding:40px 20px;color:#999;font-size:14px}
 </style>
 </head>
 <body>
-
 <header>
 <h1>tradingAndroid 下载中心</h1>
-<p>选择对应版本，优先使用"下载"按钮</p>
+<p>在公司请优先使用内网下载</p>
 </header>
-
 <div class="container">
-<div class="filters">
-<button class="filter-btn" data-f="plat" data-v="all">全部平台</button>
+<a class="btn-big" href="http://192.168.8.159:8080/download-page" target="_blank">&#x26A1; 跳转内网极速下载</a>
+<div class="divider">或者从 GitHub 直接下载</div>
+<div class="filter-bar">
+<button class="filter-btn active" data-f="plat" data-v="all">全部</button>
 <button class="filter-btn" data-f="plat" data-v="android">Android</button>
 <button class="filter-btn" data-f="plat" data-v="ios">iOS</button>
-<div style="flex:1"></div>
-<button class="filter-btn" data-f="env" data-v="all">全部版本</button>
+<button class="filter-btn active" data-f="env" data-v="all" style="margin-left:auto">全部</button>
 <button class="filter-btn" data-f="env" data-v="release">正式版</button>
 <button class="filter-btn" data-f="env" data-v="test">测试版</button>
 </div>
 <div id="releases"></div>
 <div class="loading" id="loading">加载中...</div>
-<div class="empty" id="empty">暂无匹配的版本</div>
+<div class="empty" id="empty" style="display:none">暂无版本</div>
 </div>
-
 <script>
-const LOCAL_SERVER = 'http://192.168.8.159:8080';
-const GITHUB_API = 'https://api.github.com/repos/xiaozaq123/trading-releases/releases';
-let allReleases = [];
-let platFilter = 'all';
-let envFilter = 'all';
-
-function formatSize(bytes) {
-  if (!bytes) return '';
-  const mb = bytes / 1048576;
-  return mb >= 1 ? mb.toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
+var GITHUB_API='https://api.github.com/repos/xiaozaq123/trading-releases/releases';
+var allReleases=[],platFilter='all',envFilter='all';
+function formatSize(b){if(!b)return'';var m=b/1048576;return m>=1?m.toFixed(1)+' MB':(b/1024).toFixed(0)+' KB'}
+function ne(env){if(env==='prod'||env==='release')return'release';if(env==='sit'||env==='test')return'test';return env}
+function render(){
+  var f=allReleases.filter(function(r){if(platFilter!=='all'&&r.platform!==platFilter)return false;if(envFilter!=='all'&&ne(r.env)!==envFilter)return false;return true});
+  var el=document.getElementById('releases'),em=document.getElementById('empty');
+  if(f.length===0){el.innerHTML='';em.style.display='block';return}
+  em.style.display='none';
+  el.innerHTML=f.map(function(r){
+    var e=ne(r.env),el2=e==='release'?'正式版':'测试版',eb=e==='release'?'badge-release':'badge-test';
+    var pl=r.platform==='android'?'Android':'iOS',pb=r.platform==='android'?'badge-android':'badge-ios';
+    var ic=r.platform==='android'?'\u{1F916}':'\u{1F34E}';
+    return '<div class="card"><div class="info"><div class="version">'+ic+' v'+r.version+'</div><div class="meta"><span class="badge '+eb+'">'+el2+'</span><span class="badge '+pb+'">'+pl+'</span>'+(r.size?'<span class="size">'+formatSize(r.size)+'</span>':'')+'</div></div><a class="download" href="'+r.download_url+'" target="_blank">GitHub 下载</a></div>'
+  }).join('')
 }
-
-function normalizeEnv(env) {
-  if (env === 'prod' || env === 'release') return 'release';
-  if (env === 'sit' || env === 'test') return 'test';
-  return env;
-}
-
-function render() {
-  const filtered = allReleases.filter(r => {
-    if (platFilter !== 'all' && r.platform !== platFilter) return false;
-    if (envFilter !== 'all' && normalizeEnv(r.env) !== envFilter) return false;
-    return true;
-  });
-  const container = document.getElementById('releases');
-  const empty = document.getElementById('empty');
-  if (filtered.length === 0) {
-    container.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-  container.innerHTML = filtered.map(r => {
-    const ne = normalizeEnv(r.env);
-    const envLabel = ne === 'release' ? '正式版' : '测试版';
-    const envBadge = ne === 'release' ? 'badge-prod' : 'badge-sit';
-    const plLabel = r.platform === 'android' ? 'Android' : 'iOS';
-    const plBadge = r.platform === 'android' ? 'badge-android' : 'badge-ios';
-    const icon = r.platform === 'android' ? '🤖' : '🍎';
-    const parts = (r.local_key || '').split('/').map(function(p) { return encodeURIComponent(p); });
-    const localUrl = LOCAL_SERVER + '/download/' + parts.join('/');
-    return '<div class="card"><div class="info"><div class="version">' + icon + ' v' + r.version + '</div><div class="meta"><span class="badge ' + envBadge + '">' + envLabel + '</span><span class="badge ' + plBadge + '">' + plLabel + '</span>' + (r.size ? '<span class="size">' + formatSize(r.size) + '</span>' : '') + '</div></div><div class="btns">' + (r.local_key ? '<a class="btn-local" href="' + localUrl + '">下载</a>' : '') + '<a class="btn-backup" href="' + r.github_url + '" target="_blank">无法下载？备用下载</a></div></div>';
-  }).join('');
-}
-
-async function load() {
-  try {
-    const r = await fetch(GITHUB_API);
-    if (!r.ok) throw new Error('GitHub API 失败');
-    const data = await r.json();
-    const emptyLocalKey = {};
-    allReleases = data.filter(rel => !rel.draft).flatMap(rel => {
-      const m = rel.tag_name.match(/^v?([\d.]+)-(prod|sit|test|release)-(android|ios)$/);
-      if (!m) return [];
-      const version = m[1], env = m[2], platform = m[3];
-      const a = rel.assets && rel.assets[0];
-      if (!a) return [];
-      const github_url = a.browser_download_url;
-
-      const items = [];
-
-      const local_key = platform + '/' + normalizeEnv(env) + '/' + version + '/' + a.name;
-      items.push({
-        version, env, platform, size: a.size,
-        github_url, local_key,
-        published_at: rel.published_at
-      });
-      return items;
-    });
-    const seen = {};
-    allReleases = allReleases.filter(r => {
-      const k = r.platform + '-' + r.env + '-' + r.version;
-      if (seen[k]) return false;
-      seen[k] = true;
-      return true;
-    });
-    document.getElementById('loading').style.display = 'none';
-    if (allReleases.length === 0) {
-      document.getElementById('empty').style.display = 'block';
-      document.getElementById('empty').textContent = '暂无版本，请等待上传';
-    }
-    render();
-  } catch {
-    document.getElementById('loading').textContent = '加载失败，请刷新重试';
-  }
-}
-
-document.querySelectorAll('[data-f]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key = btn.dataset.f, val = btn.dataset.v;
-    if (key === 'plat') {
-      platFilter = val;
-      document.querySelectorAll('[data-f="plat"]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    } else {
-      envFilter = val;
-      document.querySelectorAll('[data-f="env"]').forEach(b => {
-        b.classList.remove('active', 'active-prod', 'active-sit');
-        if (b.dataset.v === 'release') btn.classList.contains('active-prod') && b.classList.remove('active-prod');
-        if (b.dataset.v === 'test') btn.classList.contains('active-sit') && b.classList.remove('active-sit');
-      });
-      btn.classList.add('active');
-      if (val === 'release') btn.classList.add('active-prod');
-      if (val === 'test') btn.classList.add('active-sit');
-    }
-    render();
-  });
+document.querySelectorAll('[data-f]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var k=btn.dataset.f,v=btn.dataset.v;
+    if(k==='plat'){platFilter=v;document.querySelectorAll('[data-f="plat"]').forEach(function(b){b.classList.remove('active')});btn.classList.add('active')}
+    else{envFilter=v;document.querySelectorAll('[data-f="env"]').forEach(function(b){b.classList.remove('active')});btn.classList.add('active')}
+    render()
+  })
 });
-document.querySelector('[data-f="plat"][data-v="all"]').classList.add('active');
-document.querySelector('[data-f="env"][data-v="all"]').classList.add('active');
-load();
+fetch(GITHUB_API).then(function(r){return r.json()}).then(function(data){
+  allReleases=data.filter(function(rel){return!rel.draft}).map(function(rel){
+    var m=rel.tag_name.match(/^v?([\d.]+)-(prod|sit|test|release)-(android|ios)$/);if(!m)return null;
+    var a=rel.assets&&rel.assets[0];if(!a)return null;
+    return{version:m[1],env:m[2],platform:m[3],size:a.size,download_url:a.browser_download_url}
+  }).filter(Boolean);
+  document.getElementById('loading').style.display='none';
+  if(allReleases.length===0)document.getElementById('empty').style.display='block';
+  render()
+}).catch(function(){document.getElementById('loading').textContent='加载失败'});
 </script>
 </body>
 </html>
