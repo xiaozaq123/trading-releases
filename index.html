@@ -98,8 +98,9 @@ function render() {
     const plLabel = r.platform === 'android' ? 'Android' : 'iOS';
     const plBadge = r.platform === 'android' ? 'badge-android' : 'badge-ios';
     const icon = r.platform === 'android' ? '🤖' : '🍎';
-    const localUrl = LOCAL_SERVER + '/download/' + encodeURIComponent(r.local_key || '');
-    return '<div class="card"><div class="info"><div class="version">' + icon + ' v' + r.version + '</div><div class="meta"><span class="badge ' + envBadge + '">' + envLabel + '</span><span class="badge ' + plBadge + '">' + plLabel + '</span>' + (r.size ? '<span class="size">' + formatSize(r.size) + '</span>' : '') + '</div></div><div class="btns">' + (r.local_key ? '<a class="btn-local" href="' + localUrl + '" target="_blank">下载</a>' : '') + '<a class="btn-backup" href="' + r.github_url + '" target="_blank">无法下载？备用下载</a></div></div>';
+    const parts = (r.local_key || '').split('/').map(function(p) { return encodeURIComponent(p); });
+    const localUrl = LOCAL_SERVER + '/download/' + parts.join('/');
+    return '<div class="card"><div class="info"><div class="version">' + icon + ' v' + r.version + '</div><div class="meta"><span class="badge ' + envBadge + '">' + envLabel + '</span><span class="badge ' + plBadge + '">' + plLabel + '</span>' + (r.size ? '<span class="size">' + formatSize(r.size) + '</span>' : '') + '</div></div><div class="btns">' + (r.local_key ? '<a class="btn-local" href="' + localUrl + '">下载</a>' : '') + '<a class="btn-backup" href="' + r.github_url + '" target="_blank">无法下载？备用下载</a></div></div>';
   }).join('');
 }
 
