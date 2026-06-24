@@ -10,7 +10,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:32px 20px;text-align:center}
 header h1{font-size:26px;margin-bottom:4px}
 header p{font-size:14px;opacity:.85}
-header .mode{font-size:12px;margin-top:8px;opacity:.7}
 .container{max-width:800px;margin:0 auto;padding:20px}
 .filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
 .filter-btn{padding:7px 18px;border:2px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:.2s}
@@ -26,28 +25,25 @@ header .mode{font-size:12px;margin-top:8px;opacity:.7}
 .badge-sit{background:#fef3c7;color:#d97706}
 .badge-android{background:#e0e7ff;color:#4f46e5}
 .badge-ios{background:#f3e8ff;color:#9333ea}
-.badge-speed{background:#e0f2fe;color:#0284c7}
-.card .download{background:#667eea;color:#fff;border:none;padding:9px 22px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:.2s;text-align:center}
-.card .download:hover{background:#5a6fd6}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns a{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;transition:.2s;text-align:center}
+.btn-local{background:#22c55e;color:#fff}
+.btn-local:hover{background:#16a34a}
+.btn-backup{background:#e0e0e0;color:#666;font-size:12px}
+.btn-backup:hover{background:#ccc}
 .card .size{font-size:13px;color:#aaa;white-space:nowrap}
 .loading,.empty{text-align:center;padding:60px 20px;color:#999;font-size:15px}
 .empty{display:none}
-.status-bar{text-align:center;padding:8px;font-size:13px;border-radius:0 0 8px 8px;margin-bottom:16px}
-.status-local{background:#dcfce7;color:#16a34a}
-.status-github{background:#fef3c7;color:#d97706}
-.status-error{background:#fee2e2;color:#dc2626}
 </style>
 </head>
 <body>
 
 <header>
 <h1>tradingAndroid 下载中心</h1>
-<p>选择对应版本下载安装包</p>
-<div class="mode" id="modeStatus">检测连接中...</div>
+<p>选择对应版本，优先使用"下载"按钮</p>
 </header>
 
 <div class="container">
-<div class="status-bar" id="statusBar"></div>
 <div class="filters">
 <button class="filter-btn" data-f="plat" data-v="all">全部平台</button>
 <button class="filter-btn" data-f="plat" data-v="android">Android</button>
@@ -75,17 +71,12 @@ function formatSize(bytes) {
   return mb >= 1 ? mb.toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
 }
 
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
 function normalizeEnv(env) {
   if (env === 'prod' || env === 'release') return 'release';
   if (env === 'sit' || env === 'test') return 'test';
   return env;
 }
+
 function render() {
   const filtered = allReleases.filter(r => {
     if (platFilter !== 'all' && r.platform !== platFilter) return false;
@@ -107,68 +98,51 @@ function render() {
     const plLabel = r.platform === 'android' ? 'Android' : 'iOS';
     const plBadge = r.platform === 'android' ? 'badge-android' : 'badge-ios';
     const icon = r.platform === 'android' ? '🤖' : '🍎';
-    const speedBadge = r.source === 'local' ? '<span class="badge badge-speed">局域网</span>' : '';
-    return '<div class="card"><div class="info"><div class="version">' + icon + ' v' + r.version + '</div><div class="meta"><span class="badge ' + envBadge + '">' + envLabel + '</span><span class="badge ' + plBadge + '">' + plLabel + '</span>' + speedBadge + (r.size ? '<span class="size">' + formatSize(r.size) + '</span>' : '') + (r.published_at ? '<span class="size">' + formatDate(r.published_at) + '</span>' : '') + '</div></div><a class="download" href="' + r.download_url + '" target="_blank">下载</a></div>';
+    const localUrl = LOCAL_SERVER + '/download/' + encodeURIComponent(r.local_key || '');
+    return '<div class="card"><div class="info"><div class="version">' + icon + ' v' + r.version + '</div><div class="meta"><span class="badge ' + envBadge + '">' + envLabel + '</span><span class="badge ' + plBadge + '">' + plLabel + '</span>' + (r.size ? '<span class="size">' + formatSize(r.size) + '</span>' : '') + '</div></div><div class="btns">' + (r.local_key ? '<a class="btn-local" href="' + localUrl + '" target="_blank">下载</a>' : '') + '<a class="btn-backup" href="' + r.github_url + '" target="_blank">无法下载？备用下载</a></div></div>';
   }).join('');
 }
 
-async function checkLocal() {
+async function load() {
   try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 2000);
-    const r = await fetch(LOCAL_SERVER + '/api/list', { signal: ctrl.signal });
-    clearTimeout(t);
-    if (!r.ok) return null;
-    return await r.json();
-  } catch { return null; }
-}
+    const r = await fetch(GITHUB_API);
+    if (!r.ok) throw new Error('GitHub API 失败');
+    const data = await r.json();
+    const emptyLocalKey = {};
+    allReleases = data.filter(rel => !rel.draft).flatMap(rel => {
+      const m = rel.tag_name.match(/^v?([\d.]+)-(prod|sit|test|release)-(android|ios)$/);
+      if (!m) return [];
+      const version = m[1], env = m[2], platform = m[3];
+      const a = rel.assets && rel.assets[0];
+      if (!a) return [];
+      const github_url = a.browser_download_url;
 
-async function loadFromGitHub() {
-  const r = await fetch(GITHUB_API);
-  if (!r.ok) throw new Error('GitHub API 失败');
-  const data = await r.json();
-  return data.filter(rel => !rel.draft).map(rel => {
-    const m = rel.tag_name.match(/^v?([\d.]+)-(prod|sit|test|release)-(android|ios)$/);
-    if (!m) return null;
-    const a = rel.assets && rel.assets[0];
-    return {
-      version: m[1], env: m[2], platform: m[3],
-      size: a ? a.size : 0,
-      download_url: a ? a.browser_download_url : '',
-      published_at: rel.published_at,
-      source: 'github'
-    };
-  }).filter(Boolean);
-}
+      const items = [];
 
-async function init() {
-  const statusBar = document.getElementById('statusBar');
-  const modeStatus = document.getElementById('modeStatus');
-  const local = await checkLocal();
-  if (local && local.length > 0) {
-    allReleases = local.map(f => ({
-      version: f.version, env: f.env, platform: f.platform,
-      size: f.size, download_url: LOCAL_SERVER + '/download/' + encodeURIComponent(f.key),
-      published_at: new Date(f.mtime * 1000).toISOString(),
-      source: 'local'
-    }));
-    statusBar.className = 'status-bar status-local';
-    statusBar.textContent = '已连接到本地服务器 - 极速下载';
-    modeStatus.textContent = '局域网模式';
-  } else {
-    try {
-      allReleases = await loadFromGitHub();
-      statusBar.className = 'status-bar status-github';
-      statusBar.textContent = '本地服务器未连接，使用 GitHub 备用下载';
-      modeStatus.textContent = 'GitHub 备用模式（速度可能较慢）';
-    } catch {
-      statusBar.className = 'status-bar status-error';
-      statusBar.textContent = '加载失败，请稍后刷新重试';
-      modeStatus.textContent = '连接失败';
+      const local_key = platform + '/' + normalizeEnv(env) + '/' + version + '/' + a.name;
+      items.push({
+        version, env, platform, size: a.size,
+        github_url, local_key,
+        published_at: rel.published_at
+      });
+      return items;
+    });
+    const seen = {};
+    allReleases = allReleases.filter(r => {
+      const k = r.platform + '-' + r.env + '-' + r.version;
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+    document.getElementById('loading').style.display = 'none';
+    if (allReleases.length === 0) {
+      document.getElementById('empty').style.display = 'block';
+      document.getElementById('empty').textContent = '暂无版本，请等待上传';
     }
+    render();
+  } catch {
+    document.getElementById('loading').textContent = '加载失败，请刷新重试';
   }
-  document.getElementById('loading').style.display = 'none';
-  render();
 }
 
 document.querySelectorAll('[data-f]').forEach(btn => {
@@ -194,7 +168,7 @@ document.querySelectorAll('[data-f]').forEach(btn => {
 });
 document.querySelector('[data-f="plat"][data-v="all"]').classList.add('active');
 document.querySelector('[data-f="env"][data-v="all"]').classList.add('active');
-init();
+load();
 </script>
 </body>
 </html>
