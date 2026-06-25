@@ -41,12 +41,13 @@ function showOffline(){
   document.getElementById('hintText').textContent = '等管理员开机后再来';
 }
 // 先尝试本地回环（管理员本机秒开）
-var ctrl = new AbortController();
-setTimeout(function(){ ctrl.abort(); }, 1000);
-fetch('http://127.0.0.1:8080/download-page', {signal: ctrl.signal, mode: 'no-cors'}).then(function(){
-  setBtn('127.0.0.1');
-}).catch(function(){
-  // 本机连不上，去读 ip.json 拿 LAN IP
+var pingTimeout = setTimeout(function(){ fallbackToIpJson(); }, 1000);
+var pingImg = new Image();
+pingImg.onload = function(){ clearTimeout(pingTimeout); setBtn('127.0.0.1'); };
+pingImg.onerror = function(){ clearTimeout(pingTimeout); fallbackToIpJson(); };
+pingImg.src = 'http://127.0.0.1:8080/ping?_t=' + Date.now();
+
+function fallbackToIpJson(){
   fetch('./ip.json?_t=' + Date.now()).then(function(r){
     if(!r.ok)throw new Error('获取失败');
     return r.json();
@@ -54,7 +55,7 @@ fetch('http://127.0.0.1:8080/download-page', {signal: ctrl.signal, mode: 'no-cor
     if(!data.ip)throw new Error('IP为空');
     setBtn(data.ip);
   }).catch(showOffline);
-});
+}
 </script>
 </body>
 </html>
