@@ -10,6 +10,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:32px 20px;text-align:center}
 header h1{font-size:24px;margin-bottom:4px}
 header p{font-size:13px;opacity:.85}
+.cert-notice{background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px;color:#92400e;text-align:center;display:none}
 .container{max-width:800px;margin:0 auto;padding:20px}
 .filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
 .filter-btn{padding:7px 18px;border:2px solid #ddd;border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:.2s}
@@ -43,6 +44,7 @@ header p{font-size:13px;opacity:.85}
 <p class="status-bar" id="statusBar">检测服务器状态...</p>
 </header>
 <div class="container">
+<div id="certNotice" class="cert-notice">首次访问安全页面会提示证书警告，点击「高级」→「继续前往（不安全）」即可</div>
 <div class="filters">
 <button class="filter-btn active" data-f="plat" data-v="all">全部平台</button>
 <button class="filter-btn" data-f="plat" data-v="android">Android</button>
@@ -75,11 +77,12 @@ function render(){
     var e=ne(r.env),el2=e==='release'?'正式版':'测试版',eb=e==='release'?'badge-release':'badge-test';
     var pl=r.platform==='android'?'Android':'iOS',pb=r.platform==='android'?'badge-android':'badge-ios';
     var ic=r.platform==='android'?'\u{1F916}':'\u{1F34E}';
-    return '<div class="card"><div class="header"><div class="version">'+ic+' v'+r.version+'</div><div class="meta"><span class="badge '+eb+'">'+el2+'</span><span class="badge '+pb+'">'+pl+'</span>'+(r.size?'<span class="size">'+formatSize(r.size)+'</span>':'')+'</div></div><div class="btns"><a class="btn-local" href="'+r.download_url+'" onclick="onDownload(this)">下载</a></div></div>'
+    return '<div class="card"><div class="header"><div class="version">'+ic+' v'+r.version+'</div><div class="meta"><span class="badge '+eb+'">'+el2+'</span><span class="badge '+pb+'">'+pl+'</span>'+(r.size?'<span class="size">'+formatSize(r.size)+'</span>':'')+'</div></div><div class="btns"><a class="btn-local" href="'+r.download_url+'">下载</a></div></div>'
   }).join('')
 }
 
 function detectServer(callback){
+  document.getElementById('certNotice').style.display='block';
   var timeout=setTimeout(function(){fetchIPFromGithub(callback)},1500);
   var img=new Image();
   img.onload=function(){clearTimeout(timeout);serverIP='127.0.0.1';setStatus(true,'\u{1F7E2} 服务器在线（本机直连）');if(callback)callback()};
@@ -98,19 +101,12 @@ function setStatus(online,msg){
   var el=document.getElementById('statusBar');el.textContent=msg;el.className='status-bar '+(online?'online':'offline')
 }
 
-function onDownload(el){
-  var txt=el.textContent;
-  if(txt.indexOf('连接中')!==-1)return;
-  el.textContent='\u23F3 连接中（首次需等待 30-60秒）...';
-  setTimeout(function(){el.textContent=txt},2e3)
-}
-
 function loadReleases(){
   if(!serverIP){document.getElementById('loading').style.display='none';document.getElementById('offline').style.display='block';return}
   fetch('./releases.json?_t='+Date.now()).then(function(r){if(!r.ok)throw new Error('获取失败');return r.json()}).then(function(data){
     document.getElementById('loading').style.display='none';
     allReleases=data.map(function(f){
-      return{version:f.version,env:f.env,platform:f.platform,size:f.size,filename:f.filename,download_url:'http://'+serverIP+':8080/download/'+f.platform+'/'+f.env+'/'+f.version+'/'+encodeURIComponent(f.filename)}
+      return{version:f.version,env:f.env,platform:f.platform,size:f.size,filename:f.filename,download_url:'https://'+serverIP+':8443/download/'+f.platform+'/'+f.env+'/'+f.version+'/'+encodeURIComponent(f.filename)}
     });
     if(allReleases.length===0){document.getElementById('empty').style.display='block';document.getElementById('empty').textContent='\u{1F4E6} 暂无版本'}
     render()
