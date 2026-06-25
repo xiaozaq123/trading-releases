@@ -12,15 +12,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .card p{font-size:14px;color:#666;margin-bottom:24px;line-height:1.6}
 .btn{display:block;width:100%;padding:16px;background:#22c55e;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;transition:.2s;box-shadow:0 4px 12px rgba(34,197,94,.3)}
 .btn:hover{background:#16a34a}
+.btn:disabled{background:#ccc;box-shadow:none;cursor:not-allowed}
 .hint{font-size:12px;color:#999;margin-top:16px}
 </style>
 </head>
 <body>
 <div class="card">
 <h1>tradingAndroid 下载中心</h1>
-<p>请确保你连接了公司内网<br>点击下方按钮开始下载</p>
-<a class="btn" href="http://192.168.8.159:8080/download-page">&#x26A1; 进入下载页面</a>
-<div class="hint">如果无法访问，请联系管理员确认服务器是否开机</div>
+<p id="statusText">检测服务器状态...</p>
+<a class="btn" id="downloadBtn" href="#" target="_blank" disabled style="pointer-events:none">获取地址中...</a>
+<div class="hint" id="hintText"></div>
 </div>
+<script>
+fetch('/ip.json?_t=' + Date.now()).then(function(r){
+  if(!r.ok)throw new Error('获取失败');
+  return r.json();
+}).then(function(data){
+  var ip = data.ip;
+  if(!ip)throw new Error('IP为空');
+  document.getElementById('statusText').textContent = '点击下方按钮进入内网下载页面';
+  var btn = document.getElementById('downloadBtn');
+  btn.href = 'http://' + ip + ':8080/download-page';
+  btn.textContent = '\u26A1 进入下载页面';
+  btn.style.pointerEvents = 'auto';
+  btn.removeAttribute('disabled');
+  document.getElementById('hintText').textContent = '如果无法访问，说明服务器未开机';
+}).catch(function(){
+  document.getElementById('statusText').textContent = '服务器未开机，请联系管理员';
+  var btn = document.getElementById('downloadBtn');
+  btn.textContent = '暂时无法使用';
+  btn.style.background = '#ccc';
+  document.getElementById('hintText').textContent = '等管理员开机后再来';
+});
+</script>
 </body>
 </html>
