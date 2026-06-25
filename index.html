@@ -103,14 +103,17 @@ function setStatus(online,msg){
 
 function loadReleases(){
   if(!serverIP){document.getElementById('loading').style.display='none';document.getElementById('offline').style.display='block';return}
-  fetch('./releases.json?_t='+Date.now()).then(function(r){if(!r.ok)throw new Error('获取失败');return r.json()}).then(function(data){
+  var url='https://api.github.com/repos/xiaozaq123/trading-releases/contents/releases.json?_t='+Date.now();
+  fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('获取失败');return r.json()}).then(function(d){
+    var raw=atob(d.content.replace(/\n/g,''));return JSON.parse(raw)
+  }).then(function(data){
     document.getElementById('loading').style.display='none';
     allReleases=data.map(function(f){
       return{version:f.version,env:f.env,platform:f.platform,size:f.size,filename:f.filename,download_url:'https://'+serverIP+':8443/download/'+f.platform+'/'+f.env+'/'+f.version+'/'+encodeURIComponent(f.filename)}
     });
     if(allReleases.length===0){document.getElementById('empty').style.display='block';document.getElementById('empty').textContent='\u{1F4E6} 暂无版本'}
     render()
-  }).catch(function(){document.getElementById('loading').textContent='\u{26A0}\u{FE0F} 同步数据加载失败，请等待服务器同步'})
+  }).catch(function(){document.getElementById('loading').textContent='\u{26A0}\u{FE0F} 数据加载失败，请刷新页面'})
 }
 
 detectServer(function(){loadReleases()});
