@@ -75,7 +75,7 @@ function render(){
     var e=ne(r.env),el2=e==='release'?'正式版':'测试版',eb=e==='release'?'badge-release':'badge-test';
     var pl=r.platform==='android'?'Android':'iOS',pb=r.platform==='android'?'badge-android':'badge-ios';
     var ic=r.platform==='android'?'\u{1F916}':'\u{1F34E}';
-    return '<div class="card"><div class="header"><div class="version">'+ic+' v'+r.version+'</div><div class="meta"><span class="badge '+eb+'">'+el2+'</span><span class="badge '+pb+'">'+pl+'</span>'+(r.size?'<span class="size">'+formatSize(r.size)+'</span>':'')+'</div></div><div class="btns"><a class="btn-local" href="'+r.download_url+'" target="_blank">下载</a></div></div>'
+    return '<div class="card"><div class="header"><div class="version">'+ic+' v'+r.version+'</div><div class="meta"><span class="badge '+eb+'">'+el2+'</span><span class="badge '+pb+'">'+pl+'</span>'+(r.size?'<span class="size">'+formatSize(r.size)+'</span>':'')+'</div></div><div class="btns"><a class="btn-local" href="'+r.download_url+'" onclick="onDownload(this)">下载</a></div></div>'
   }).join('')
 }
 
@@ -96,6 +96,13 @@ function fetchIPFromGithub(callback){
 
 function setStatus(online,msg){
   var el=document.getElementById('statusBar');el.textContent=msg;el.className='status-bar '+(online?'online':'offline')
+}
+
+function onDownload(el){
+  var txt=el.textContent;
+  if(txt.indexOf('连接中')!==-1)return;
+  el.textContent='\u23F3 连接中（首次需等待 30-60秒）...';
+  setTimeout(function(){el.textContent=txt},2e3)
 }
 
 function loadReleases(){
